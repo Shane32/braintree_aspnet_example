@@ -32,7 +32,7 @@ namespace BraintreeASPExample.Controllers
         public ActionResult Create()
         {
             var gateway = config.GetGateway();
-            Decimal amount;
+            decimal amount;
 
             try
             {
