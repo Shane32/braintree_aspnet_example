@@ -12,14 +12,14 @@ namespace BraintreeASPExample.Controllers
         public IBraintreeConfiguration config = new BraintreeConfiguration();
 
         public static readonly TransactionStatus[] transactionSuccessStatuses = {
-                                                                                    TransactionStatus.AUTHORIZED,
-                                                                                    TransactionStatus.AUTHORIZING,
-                                                                                    TransactionStatus.SETTLED,
-                                                                                    TransactionStatus.SETTLING,
-                                                                                    TransactionStatus.SETTLEMENT_CONFIRMED,
-                                                                                    TransactionStatus.SETTLEMENT_PENDING,
-                                                                                    TransactionStatus.SUBMITTED_FOR_SETTLEMENT
-                                                                                };
+            TransactionStatus.AUTHORIZED,
+            TransactionStatus.AUTHORIZING,
+            TransactionStatus.SETTLED,
+            TransactionStatus.SETTLING,
+            TransactionStatus.SETTLEMENT_CONFIRMED,
+            TransactionStatus.SETTLEMENT_PENDING,
+            TransactionStatus.SUBMITTED_FOR_SETTLEMENT
+        };
 
         public ActionResult New()
         {
@@ -34,6 +34,28 @@ namespace BraintreeASPExample.Controllers
             var gateway = config.GetGateway();
             decimal amount;
 
+            Customer btCustomer = null;
+            Result<Customer> customerResult = null;
+
+            try
+            {
+                btCustomer = gateway.Customer.Find("1");
+            }
+            catch { }
+
+            if (btCustomer == null)
+            {
+                CustomerRequest customerRequest = new CustomerRequest
+                {
+                    CustomerId = "1",
+                    Id = "1",
+                    Email = "candyland@test.com"
+                };
+
+
+                customerResult = gateway.Customer.Create(customerRequest);
+            }
+
             try
             {
                 amount = Convert.ToDecimal(Request["amount"]);
@@ -45,30 +67,61 @@ namespace BraintreeASPExample.Controllers
             }
 
             var nonce = Request["payment_method_nonce"];
-            var request = new TransactionRequest
+            var paymentType = Request["payment_type"];
+            var lastFour = Request["last_four"];
+            var cardType = Request["card_type"];
+
+
+            //var paymentRequest = new PaymentMethodRequest
+            //{
+            //    CustomerId = "1",
+            //    PaymentMethodNonce = nonce,
+            //};
+
+            //Result<PaymentMethod> paymentMethodResult = gateway.PaymentMethod.Create(paymentRequest);
+
+            //if (paymentMethodResult == null)
+            //{
+            //    return View("Unable to process payment. Please try again.");
+            //}
+
+
+            var transactionRequest = new TransactionRequest
             {
+
                 Amount = amount,
                 PaymentMethodNonce = nonce,
+                CustomerId = "1",
                 Options = new TransactionOptionsRequest
                 {
-                    SubmitForSettlement = true
-                }
+                    SubmitForSettlement = true,
+                    StoreInVaultOnSuccess = true,
+                    //AddBillingAddressToPaymentMethod = true,
+                },
             };
 
-            Result<Transaction> result = gateway.Transaction.Sale(request);
-            if (result.IsSuccess())
+            //TODO: add this if paymentmethodtoken exists
+            //TransactionCreditCardRequest ccr = new TransactionCreditCardRequest
+            //{
+            //    CVV = cvv,
+            //};
+            //transactionRequest.CreditCard = ccr;
+
+            Result<Transaction> transactionResult = gateway.Transaction.Sale(transactionRequest);
+            if (transactionResult.IsSuccess())
             {
-                Transaction transaction = result.Target;
+                Transaction transaction = transactionResult.Target;
+
                 return RedirectToAction("Show", new { id = transaction.Id });
             }
-            else if (result.Transaction != null)
+            else if (transactionResult.Transaction != null)
             {
-                return RedirectToAction("Show", new { id = result.Transaction.Id } );
+                return RedirectToAction("Show", new { id = transactionResult.Transaction.Id });
             }
             else
             {
                 string errorMessages = "";
-                foreach (ValidationError error in result.Errors.DeepAll())
+                foreach (ValidationError error in transactionResult.Errors.DeepAll())
                 {
                     errorMessages += "Error: " + (int)error.Code + " - " + error.Message + "\n";
                 }
@@ -78,9 +131,56 @@ namespace BraintreeASPExample.Controllers
 
         }
 
-        public ActionResult Show(String id)
+        public ActionResult VerifyCVV()
         {
             var gateway = config.GetGateway();
+            var nonce = Request["cvv_nonce"];
+            var paymentToken = Request["payment_method_token"];
+
+            //Example of verify existing CVV
+            //PaymentMethodRequest request = new PaymentMethodRequest
+            //{
+            //    PaymentMethodNonce = nonce,
+            //    Options = new PaymentMethodOptionsRequest
+            //    {
+            //        VerifyCard = true
+            //    }
+            //};
+            //Result<PaymentMethod> verifyResult = gateway.PaymentMethod.Update(paymentToken, request);
+
+
+            //Example of processing a transaction and verifying the CVV
+            var transactionRequest = new TransactionRequest
+            {
+
+                Amount = 20,
+                PaymentMethodNonce = nonce,
+                PaymentMethodToken = paymentToken,
+                CustomerId = "1",
+                Options = new TransactionOptionsRequest
+                {
+                    SubmitForSettlement = true,
+                    //AddBillingAddressToPaymentMethod = true,
+                },
+            };
+
+            Result<Transaction> transactionResult = gateway.Transaction.Sale(transactionRequest);
+
+
+            if (transactionResult.CreditCardVerification.CvvResponseCode == "M")
+            {
+                return View("Transaction Processed and CVV verified");
+            } else
+            {
+                return View("Transaction Failed and CVV invalid/not provided");
+            }
+            
+        }
+
+        public ActionResult Show(String id)
+        {
+            var gateway = config.GetGateway(); 
+            var clientToken = gateway.ClientToken.Generate();
             Transaction transaction = gateway.Transaction.Find(id);
 
             if (transactionSuccessStatuses.Contains(transaction.Status))
@@ -91,11 +191,12 @@ namespace BraintreeASPExample.Controllers
             }
             else
             {
-                 TempData["header"] = "Transaction Failed";
-                 TempData["icon"] = "fail";
-                 TempData["message"] = "Your test transaction has a status of " + transaction.Status + ". See the Braintree API response and try again.";
-             };
+                TempData["header"] = "Transaction Failed";
+                TempData["icon"] = "fail";
+                TempData["message"] = "Your test transaction has a status of " + transaction.Status + ". See the Braintree API response and try again.";
+            };
 
+            ViewBag.ClientToken = clientToken;
             ViewBag.Transaction = transaction;
             return View();
         }
