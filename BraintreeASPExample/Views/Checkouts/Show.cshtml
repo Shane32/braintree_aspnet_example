@@ -2,7 +2,7 @@
     <div class="response container">
         <div class="content">
             <div class="icon">
-                <img src="@Url.Content(String.Format("/App_Themes/images/{0}.svg", TempData["icon"]))" alt ="">
+                <img src="@Url.Content(String.Format("/App_Themes/images/{0}.svg", TempData["icon"]))" alt="">
             </div>
 
             <h1>@TempData["header"].ToString()</h1>
@@ -95,48 +95,48 @@
             </table>
         </section>
         @{
-        if (@ViewBag.Transaction.CustomerDetails.Id != null)
-        {
-            <section>
-                <h5>Customer Details</h5>
-                <table cellpadding="0" cellspacing="0">
-                    <tbody>
-                        <tr>
-                            <td>id</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.Id</td>
-                        </tr>
-                        <tr>
-                            <td>first_name</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.FirstName</td>
-                        </tr>
-                        <tr>
-                            <td>last_name</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.LastName</td>
-                        </tr>
-                        <tr>
-                            <td>email</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.Email</td>
-                        </tr>
-                        <tr>
-                            <td>company</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.Company</td>
-                        </tr>
-                        <tr>
-                            <td>website</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.Website</td>
-                        </tr>
-                        <tr>
-                            <td>phone</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.Phone</td>
-                        </tr>
-                        <tr>
-                            <td>fax</td>
-                            <td>@ViewBag.Transaction.CustomerDetails.Fax</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-    }
+            if (@ViewBag.Transaction.CustomerDetails.Id != null)
+            {
+                <section>
+                    <h5>Customer Details</h5>
+                    <table cellpadding="0" cellspacing="0">
+                        <tbody>
+                            <tr>
+                                <td>id</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.Id</td>
+                            </tr>
+                            <tr>
+                                <td>first_name</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.FirstName</td>
+                            </tr>
+                            <tr>
+                                <td>last_name</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.LastName</td>
+                            </tr>
+                            <tr>
+                                <td>email</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.Email</td>
+                            </tr>
+                            <tr>
+                                <td>company</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.Company</td>
+                            </tr>
+                            <tr>
+                                <td>website</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.Website</td>
+                            </tr>
+                            <tr>
+                                <td>phone</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.Phone</td>
+                            </tr>
+                            <tr>
+                                <td>fax</td>
+                                <td>@ViewBag.Transaction.CustomerDetails.Fax</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+            }
         }
         <section>
             <p class="center small">Integrate with the Braintree SDK for a secure and seamless checkout</p>
@@ -148,3 +148,63 @@
         </section>
     </article>
 </aside>
+
+<form id="verify-cvv" method="post" action="/checkouts/VerifyCVV">
+    <section>
+        <label for="cvv"></label>
+        <div id="cvv"></div>
+    </section>
+
+    <input id="nonce" name="cvv_nonce" type="hidden" />
+    <input id="token" name="payment_method_token" type="text" value="@ViewBag.Transaction.CreditCard.Token"/>
+    <button class="button" type="submit"><span>Verify CVV</span></button>
+</form>
+
+
+<script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
+<script>
+    var client_token = "@ViewBag.ClientToken";
+    var form = document.querySelector('#verify-cvv');
+
+    if (braintree !== undefined) console.log(true);
+
+    braintree.client.create({
+        authorization: client_token
+    }, function (clientErr, clientInstance) {
+        console.log(clientErr, clientInstance);
+
+        if (clientErr) return;
+
+        var options = {
+            client: clientInstance,
+            fields: {
+                cvv: {
+                    selector: '#cvv',
+                    placeholder: '***',
+                    type: 'password'
+                },
+            }
+        };
+
+        braintree.hostedFields.create(options, function (createErr, hostedFieldsInstance) {
+            if (createErr) return;
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                console.log(hostedFieldsInstance);
+                hostedFieldsInstance.tokenize(function (err, payload) {
+                    if (err) {
+                        console.log('Error', err);
+                        return;
+                    }
+                    console.log(payload);
+                    // Add the nonce to the form and submit
+                    document.querySelector('#nonce').value = payload.nonce;
+                    //vonsole.log(document.querySelector("#cvv")., document.querySelector("#cvv_value").value);
+                    //document.querySelector("#cvv_value").value = document.querySelector("#cvv").value;
+                    form.submit();
+                });
+            });
+        });
+    });
+</script>

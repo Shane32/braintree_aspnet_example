@@ -19,42 +19,107 @@
                     </div>
                 </label>
 
-                <div class="bt-drop-in-wrapper">
-                    <div id="bt-dropin"></div>
-                </div>
+                @*<div class="bt-drop-in-wrapper">
+                        <div id="bt-dropin"></div>
+                    </div>*@
+                <label for="card-number"></label>
+                <div id="card-number"></div>
+
+
+                <label for="expiration-month"></label>
+                <div id="expiration-month"></div>
+
+                <label for="expiration-year"></label>
+                <div id="expiration-year"></div>
+                <label for="cvv"></label>
+                <div id="cvv"></div>
             </section>
 
             <input id="nonce" name="payment_method_nonce" type="hidden" />
+            <input id="paymentType" name="payment_type" type="hidden" />
+            <input id="lastFour" name="last_four" type="hidden" />
+            <input id="cardType" name="card_type" type="hidden" />
             <button class="button" type="submit"><span>Test Transaction</span></button>
         </form>
-
     </div>
 </div>
 
-<script src="https://js.braintreegateway.com/web/dropin/1.22.1/js/dropin.min.js"></script>
+@*<script src="https://js.braintreegateway.com/web/dropin/1.22.1/js/dropin.min.js"></script>*@
+<script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
 <script>
     var client_token = "@ViewBag.ClientToken";
     var form = document.querySelector('#payment-form');
 
-    braintree.dropin.create({
-        authorization: client_token,
-        container: '#bt-dropin',
-        paypal: {
-            flow: 'vault'
-        }
-    }, function (createErr, instance) {
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
+    if (braintree !== undefined) console.log(true);
 
-            instance.requestPaymentMethod(function (err, payload) {
-                if (err) {
-                    console.log('Error', err);
-                    return;
+    braintree.client.create({
+        authorization: client_token
+    }, function (clientErr, clientInstance) {
+        console.log(clientErr, clientInstance);
+
+        if (clientErr) return;
+
+        var options = {
+            client: clientInstance,
+            fields: {
+                number: {
+                    selector: '#card-number',
+                    placeholder: '4111 1111 1111 1111'
+                },
+                cvv: {
+                    selector: '#cvv',
+                    placeholder: '***',
+                    type: 'password'
+                },
+                expirationMonth: {
+                    selector: '#expiration-month',
+                    placeholder: 'MM',
+                    select: {
+                        options: [
+                            '01',
+                            '02',
+                            '03',
+                            '04',
+                            '05',
+                            '06',
+                            '07',
+                            '08',
+                            '09',
+                            '10',
+                            '11',
+                            '12'
+                        ]
+                    }
+                },
+                expirationYear: {
+                    selector: '#expiration-year',
+                    placeholder: 'YYYY',
+                    select: true
                 }
+            }
+        };
 
-                // Add the nonce to the form and submit
-                document.querySelector('#nonce').value = payload.nonce;
-                form.submit();
+        braintree.hostedFields.create(options, function (createErr, hostedFieldsInstance) {
+            if (createErr) return;
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                console.log(hostedFieldsInstance);
+                hostedFieldsInstance.tokenize(function (err, payload) {
+                    if (err) {
+                        console.log('Error', err);
+                        return;
+                    }
+                    console.log(payload);
+                    // Add the nonce to the form and submit
+                    document.querySelector('#nonce').value = payload.nonce;
+                    document.querySelector("#paymentType").value = "CreditOrDebitCard";
+                    document.querySelector("#lastFour").value = payload.details.lastFour;
+                    document.querySelector("#cardType").value = payload.details.cardType;
+                    //vonsole.log(document.querySelector("#cvv")., document.querySelector("#cvv_value").value);
+                    //document.querySelector("#cvv_value").value = document.querySelector("#cvv").value;
+                    form.submit();
+                });
             });
         });
     });

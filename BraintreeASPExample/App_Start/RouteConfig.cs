@@ -36,8 +36,14 @@ namespace BraintreeASPExample
 
             routes.MapRoute(
                 name: "Checkouts-Show",
-                url: "checkouts/{id}",
+                url: "checkouts/Show",
                 defaults: new { controller = "Checkouts", action = "Show" }
+            );
+
+            routes.MapRoute(
+                name: "Checkouts-VerifyCVV",
+                url: "checkouts/VerifyCVV",
+                defaults: new { controller = "Checkouts", action = "VerifyCVV" }
             );
 
             routes.MapRoute(
