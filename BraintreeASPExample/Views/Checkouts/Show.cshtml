@@ -160,12 +160,20 @@
     <button class="button" type="submit"><span>Verify CVV</span></button>
 </form>
 
+<form id="retry-paypal" method="post" action="/checkouts/RetryPaypal">
+    <input id="paypalNonce" name="paypal_nonce" type="hidden" />
+    <input id="paypalToken" name="paypal_token" type="text" value="@ViewBag.Transaction.PayPalDetails.Token" />
+    <button class="button" type="submit"><span>Retry Paypal</span></button>
+</form>
+
 
 <script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
+
 <script>
     var client_token = "@ViewBag.ClientToken";
     var form = document.querySelector('#verify-cvv');
+    var form2 = document.querySelector('#retry-paypal');
 
     if (braintree !== undefined) console.log(true);
 
@@ -205,6 +213,94 @@
                     form.submit();
                 });
             });
+        });
+
+
+        const paypalOptions = {
+            flow: 'vault',
+            intent: 'capture',
+            enableShippingAddress: true,
+            shippingAddressEditable: false,
+            shippingAddressOverride: shippingAddress,
+            amount: "1.65",
+            shippingOptions: [
+                {
+                    id: 'fedex-ground',
+                    type: 'SHIPPING',
+                    label: 'Ground Shipping',
+                    selected: true,
+                    amount: {
+                        value: '1.00',
+                        currency: 'USD'
+                    }
+                },
+                {
+                    id: 'fedex-priority',
+                    type: 'SHIPPING',
+                    label: '1-Day Shipping',
+                    selected: false,
+                    amount: {
+                        value: '10.00',
+                        currency: 'USD'
+                    }
+                }
+            ],
+            lineItems: [
+                {
+                    quantity: "1",
+                    unitAmount: "1.56",
+                    name: "8T4191 Test Bolt",
+                    kind: "debit",
+                    unitTaxAmount: "0.09",
+                    description: "A cool test bolt to test things with.",
+                    productCode: "8T4191-ZBOX",
+                    url: "https://www.zbox.com/product/p/151"
+                }
+            ],
+            // Your PayPal options here. For available options, see
+            // http://braintree.github.io/braintree-web/current/PayPalCheckout.html#createPayment
+        };
+
+        braintree.paypalCheckout.create({
+            client: clientInstance
+        }, function (paypalCheckoutErr, paypalCheckoutInstance) {
+            if (paypalCheckoutErr) {
+                console.error('Error creating PayPal Checkout:', paypalCheckoutErr);
+                return;
+            }
+
+            paypal.Button.render({
+                env: 'sandbox',
+
+                payment: function () {
+                    return paypalCheckoutInstance.createPayment(paypalOptions);
+                },
+
+                onAuthorize: function (data, actions) {
+                    return paypalCheckoutInstance.tokenizePayment(data, function (err, payload) {
+                        console.log(payload);
+                        //Submit the 'payload.nonce' to your server.
+                        document.querySelector('#paypal_nonce').value = payload.nonce;
+                        //document.querySelector("#paypal_token").value = payload.token
+                        //document.querySelector("#paymentType").value = payload.type;
+                        //document.querySelector("#details").value = JSON.stringify(payload.details);
+                        form2.submit();
+                    });
+                },
+
+                onCancel: function (data) {
+                    console.log('checkout.js payment cancelled', JSON.stringify(data, 0, 2));
+                },
+
+                onError: function (err) {
+                    console.error('checkout.js error', err);
+                }
+            }, '#paypal-button').then(function () {
+                // The PayPal button will be rendered in an html element with the id
+                // `paypal-button`. This function will be called when the PayPal button
+                // is set up and ready to be used.
+            });
+
         });
     });
 </script>
