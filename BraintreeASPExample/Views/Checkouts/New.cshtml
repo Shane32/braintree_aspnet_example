@@ -39,7 +39,7 @@
             <input id="paymentType" name="payment_type" type="hidden" />
             <input id="lastFour" name="last_four" type="hidden" />
             <input id="cardType" name="card_type" type="hidden" />
-            <input id="details" name="details" type="hidden"/>
+            <input id="details" name="details" type="hidden" />
             <button class="button" type="submit"><span>Test Transaction</span></button>
 
             <section>
@@ -50,13 +50,16 @@
 </div>
 
 @*<script src="https://js.braintreegateway.com/web/dropin/1.22.1/js/dropin.min.js"></script>*@
+<script async src="https://pay.google.com/gp/p/js/pay.js" onload="console.log('TODO: add onload function')"></script>
 <script src="https://www.paypalobjects.com/api/checkout.js" data-version-4 log-level="warn"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/paypal-checkout.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.60.0/js/google-payment.min.js"></script>
 <script>
     var client_token = "@ViewBag.ClientToken";
     var form = document.querySelector('#payment-form');
+    const paymentsClient = new google.payments.api.PaymentsClient({environment: 'TEST'});
 
     var shippingAddress = {
         line1: "3120 Johnson Ave.",

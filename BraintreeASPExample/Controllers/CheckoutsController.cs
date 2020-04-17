@@ -115,14 +115,31 @@ namespace BraintreeASPExample.Controllers
                 shippingAddress.ExtendedAddress = paymentDetails.ShippingAddress.Line2;
             }
 
+            TransactionLineItemRequest[] transactionLineItemRequests = new TransactionLineItemRequest[1];
+            transactionLineItemRequests[0] = new TransactionLineItemRequest
+            {
+                Description = "A cool test bolt to test things with.",
+                Quantity = 1,
+                UnitAmount = 1.56M,
+                Name = "8T9999 Test Bolt",
+                LineItemKind = TransactionLineItemKind.DEBIT,
+                ProductCode = "8T9999-TEST",
+                TaxAmount = 0.09M,
+                UnitTaxAmount = 0.09M,
+                UnitOfMeasure = "lbs",
+                CommodityCode = "31161600",
+                TotalAmount = 1.65M
+            };
+
 
             var transactionRequest = new TransactionRequest
             {
-
-                Amount = amount,
+                Amount = 8.64M,
                 PaymentMethodNonce = nonce,
                 CustomerId = "1",
                 ShippingAddress = shippingAddress,
+                ShippingAmount = 6.99M,
+                LineItems = transactionLineItemRequests,
                 Options = new TransactionOptionsRequest
                 {
                     SubmitForSettlement = true,
@@ -180,11 +197,9 @@ namespace BraintreeASPExample.Controllers
             //};
             //Result<PaymentMethod> verifyResult = gateway.PaymentMethod.Update(paymentToken, request);
 
-
             //Example of processing a transaction and verifying the CVV
             var transactionRequest = new TransactionRequest
             {
-
                 Amount = 20,
                 PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
@@ -230,7 +245,7 @@ namespace BraintreeASPExample.Controllers
             //Example of processing a transaction and verifying the CVV
             var transactionRequest = new TransactionRequest
             {
-                Amount = 20,
+                Amount = 30,
                 PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
                 CustomerId = "1",
