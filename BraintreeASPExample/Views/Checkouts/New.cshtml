@@ -40,28 +40,32 @@
             <input id="lastFour" name="last_four" type="hidden" />
             <input id="cardType" name="card_type" type="hidden" />
             <input id="details" name="details" type="hidden" />
+            <input id="billingAddress" name="billingAddress" type="hidden"/>
             <button class="button" type="submit"><span>Test Transaction</span></button>
 
             <section>
                 <div id="paypal-button"></div>
+            </section>
+
+            <section id="google-pay-container">
+
             </section>
         </form>
     </div>
 </div>
 
 @*<script src="https://js.braintreegateway.com/web/dropin/1.22.1/js/dropin.min.js"></script>*@
-<script async src="https://pay.google.com/gp/p/js/pay.js" onload="console.log('TODO: add onload function')"></script>
+<script src="https://pay.google.com/gp/p/js/pay.js"></script>
 <script src="https://www.paypalobjects.com/api/checkout.js" data-version-4 log-level="warn"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/paypal-checkout.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/google-payment.min.js"></script>
 <script>
-    var client_token = "@ViewBag.ClientToken";
-    var form = document.querySelector('#payment-form');
-    const paymentsClient = new google.payments.api.PaymentsClient({environment: 'TEST'});
+    const client_token = "@ViewBag.ClientToken";
+    const form = document.querySelector('#payment-form');
 
-    var shippingAddress = {
+    const shippingAddress = {
         line1: "3120 Johnson Ave.",
         city: "Ypsilanti",
         state: "MI",
@@ -71,8 +75,6 @@
         recipientName: "John Doe"
     };
 
-    if (braintree !== undefined) console.log(true);
-
     braintree.client.create({
         authorization: client_token
     }, function (clientErr, clientInstance) {
@@ -80,7 +82,7 @@
 
         if (clientErr) return;
 
-        var options = {
+        const options = {
             client: clientInstance,
             fields: {
                 number: {
@@ -226,8 +228,112 @@
                     // `paypal-button`. This function will be called when the PayPal button
                     // is set up and ready to be used.
                 });
-
         });
+
+            const paymentsClient = new google.payments.api.PaymentsClient({ environment: 'TEST' });
+
+            const googleOptions = {
+                client: clientInstance,
+                googlePayVersion: 2
+            };
+
+            let PayPalPaymentMethod = {
+                "type": "PAYPAL",
+                "parameters": {
+                    "purchase_context": {
+                        "purchase_units": [{
+                            "payee": {
+                                "merchant_id": " paypal_merchant_id"
+                            }
+                        }]
+                    }
+                }
+            };
+
+            let creditCardMethods = {
+                "type": "CARD",
+                "parameters": {
+                    "allowedAuthMethods": ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+                    "allowedCardNetworks": ["AMEX", "DISCOVER", "INTERAC", "JCB", "MASTERCARD", "VISA"]
+                }
+            };
+
+            braintree.googlePayment.create(googleOptions, function (err, googlePaymentInstance) {
+                const isReadyToPayOptions = {
+                    apiVersion: 2,
+                    apiVersionMinor: 0, 
+                    allowedPaymentMethods: googlePaymentInstance.createPaymentDataRequest().allowedPaymentMethods,
+                    existingPaymentMethodRequired: true
+                };
+                paymentsClient.isReadyToPay(isReadyToPayOptions).then(function (isReadyToPay) {
+                    if (isReadyToPay.result) {
+                        const googlePayButton = paymentsClient.createButton({
+                            onClick: (e) => {
+                                e.preventDefault();
+                                const paymentDataRequest = googlePaymentInstance.createPaymentDataRequest({
+                                    transactionInfo: {
+                                        currencyCode: 'USD',
+                                        totalPriceStatus: 'FINAL',
+                                        totalPrice: '100.00'
+                                    }
+                                });
+                                const cardPaymentMethod = paymentDataRequest.allowedPaymentMethods[0];
+                                cardPaymentMethod.parameters.billingAddressRequired = true;
+                                cardPaymentMethod.parameters.billingAddressParameters = {
+                                    format: "FULL",
+                                    phoneNumberRequired: true
+                                };
+                                //PayPalPaymentMethod.tokenizationSpecification = {
+                                //    "type": "DIRECT"
+                                //};
+
+                                //todo: figure out why this doesn't work
+                                //cardPaymentMethod.parameters.shippingOptionRequired = true;
+                                //cardPaymentMethod.parameters.shippingOptionParameters = [
+                                //    {
+                                //        defaultSelectedOptionId: "0",
+                                //        shippingOptions: [
+                                //            {
+                                //                "id": "shipping-001",
+                                //                "label": "$0.00: Free shipping",
+                                //                "description": "Free Shipping delivered in 5 business days."
+                                //            },
+                                //            {
+                                //                "id": "shipping-002",
+                                //                "label": "$1.99: Standard shipping",
+                                //                "description": "Standard shipping delivered in 3 business days."
+                                //            },
+                                //            {
+                                //                "id": "shipping-003",
+                                //                "label": "$1000: Express shipping",
+                                //                "description": "Express shipping delivered in 1 business day."
+                                //            }
+                                //        ]
+                                //    }
+                                //];
+                                paymentsClient.loadPaymentData(paymentDataRequest).then(function (paymentData) {
+                                    googlePaymentInstance.parseResponse(paymentData, function (err, result) {
+                                        if (err) {
+                                            console.log(err);
+                                            // Handle parsing error
+                                        }
+                                        if (result) {
+                                            document.querySelector('#nonce').value = result.nonce;
+                                            document.querySelector("#paymentType").value = result.type;
+                                            document.querySelector("#details").value = JSON.stringify(result.details);
+                                            document.querySelector("#billingAddress").value = JSON.stringify(paymentData.paymentMethodData.info.billingAddress);
+                                            form.submit();
+                                        }
+                                        // result.type may be either "AndroidPayCard" or "PayPalAccount"
+                                    });
+                                }).catch(function (err) {
+                                    console.log(err);
+                                });
+                            }});
+                        document.getElementById('google-pay-container').appendChild(googlePayButton);
+                    }
+                });
+            });
     });
 </script>
 <script src="/App_Themes/javascript/demo.js"></script>
