@@ -181,7 +181,7 @@
     if (ViewBag.Transaction.AndroidPayDetails != null)
     {
         <form id="retry-googlepay" method="post" action="/checkouts/RetryGooglePay">
-            <input id="googleNonce" name="google_nonce" type="hidden" />
+            @*<input id="googleNonce" name="google_nonce" type="hidden" />*@
             <input id="googleToken" name="google_token" type="text" value="@ViewBag.Transaction.AndroidPayDetails.Token" />
             <section id="google-pay-container">
             </section>
@@ -378,6 +378,8 @@
                         allowedPaymentMethods: googlePaymentInstance.createPaymentDataRequest().allowedPaymentMethods,
                         existingPaymentMethodRequired: true
                     };
+
+                    console.log(googlePaymentInstance);
                     paymentsClient.isReadyToPay(isReadyToPayOptions).then(function (isReadyToPay) {
                         if (isReadyToPay.result) {
                             const googlePayButton = paymentsClient.createButton({
@@ -390,12 +392,14 @@
                                             totalPrice: '100.00'
                                         }
                                     });
-                                    const cardPaymentMethod = paymentDataRequest.allowedPaymentMethods[0];
-                                    cardPaymentMethod.parameters.billingAddressRequired = true;
-                                    cardPaymentMethod.parameters.billingAddressParameters = {
-                                        format: "FULL",
-                                        phoneNumberRequired: true
-                                    };
+
+                                    console.log(isReadyToPay);
+                                    //const cardPaymentMethod = paymentDataRequest.allowedPaymentMethods[0];
+                                    //cardPaymentMethod.parameters.billingAddressRequired = true;
+                                    //cardPaymentMethod.parameters.billingAddressParameters = {
+                                    //    format: "FULL",
+                                    //    phoneNumberRequired: true
+                                    //};
                                     //PayPalPaymentMethod.tokenizationSpecification = {
                                     //    "type": "DIRECT"
                                     //};
@@ -425,13 +429,15 @@
                                     //    }
                                     //];
                                     paymentsClient.loadPaymentData(paymentDataRequest).then(function (paymentData) {
+                                        console.log(paymentData);
                                         googlePaymentInstance.parseResponse(paymentData, function (err, result) {
                                             if (err) {
                                                 console.log(err);
                                                 // Handle parsing error
                                             }
                                             if (result) {
-                                                document.querySelector('#googleNonce').value = result.nonce;
+                                                console.log(result);
+                                                //document.querySelector('#googleNonce').value = result.nonce;
                                                 form3.submit();
                                             }
                                             // result.type may be either "AndroidPayCard" or "PayPalAccount"

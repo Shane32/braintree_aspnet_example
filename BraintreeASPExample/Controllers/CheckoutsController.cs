@@ -279,7 +279,7 @@ namespace BraintreeASPExample.Controllers
             //Example of processing a transaction and verifying the CVV
             var transactionRequest = new TransactionRequest
             {
-                Amount = 30,
+                Amount = 100,
                 PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
                 CustomerId = "1",
@@ -318,9 +318,9 @@ namespace BraintreeASPExample.Controllers
             var transactionRequest = new TransactionRequest
             {
                 Amount = 40,
-                PaymentMethodNonce = nonce,
+                //PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
-                CustomerId = "1",
+                //CustomerId = "1",
                 Options = new TransactionOptionsRequest
                 {
                     SubmitForSettlement = true,
