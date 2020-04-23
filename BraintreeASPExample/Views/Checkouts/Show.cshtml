@@ -152,16 +152,17 @@
 @{
     if (ViewBag.Transaction.CreditCard != null)
     {
-        <form id="verify-cvv" method="post" action="/checkouts/VerifyCVV">
-            <section>
-                <label for="cvv"></label>
-                <div id="cvv"></div>
-            </section>
+    <form id="verify-cvv" method="post" action="/checkouts/VerifyCVV">
+        <section>
+            <label for="cvv"></label>
+            <div id="cvv"></div>
+        </section>
 
-            <input id="nonce" name="cvv_nonce" type="hidden" />
-            <input id="token" name="payment_method_token" type="text" value="@ViewBag.Transaction.CreditCard.Token" />
-            <button class="button" type="submit"><span>Verify CVV</span></button>
-        </form>
+        <input id="cvvDeviceData" name="cvv_device_data" type="hidden" />
+        <input id="nonce" name="cvv_nonce" type="hidden" />
+        <input id="token" name="payment_method_token" type="text" value="@ViewBag.Transaction.CreditCard.Token" />
+        <button class="button" type="submit"><span>Verify CVV</span></button>
+    </form>
     }
 }
 
@@ -169,24 +170,26 @@
 @{
     if (ViewBag.Transaction.PayPalDetails != null)
     {
-        <form id="retry-paypal" method="post" action="/checkouts/RetryPaypal">
-            <input id="paypalNonce" name="paypal_nonce" type="hidden" />
-            <input id="paypalToken" name="paypal_token" type="text" value="@ViewBag.Transaction.PayPalDetails.Token" />
-            <button class="button" type="submit"><span>Retry Paypal</span></button>
-        </form>
+    <form id="retry-paypal" method="post" action="/checkouts/RetryPaypal">
+        <input id="paypalDeviceData" name="paypal_device_data" type="hidden" />
+        <input id="paypalNonce" name="paypal_nonce" type="hidden" />
+        <input id="paypalToken" name="paypal_token" type="text" value="@ViewBag.Transaction.PayPalDetails.Token" />
+        <button class="button" type="submit"><span>Retry Paypal</span></button>
+    </form>
     }
 }
 
 @{
     if (ViewBag.Transaction.AndroidPayDetails != null)
     {
-        <form id="retry-googlepay" method="post" action="/checkouts/RetryGooglePay">
-            @*<input id="googleNonce" name="google_nonce" type="hidden" />*@
-            <input id="googleToken" name="google_token" type="text" value="@ViewBag.Transaction.AndroidPayDetails.Token" />
-            <section id="google-pay-container">
-            </section>
-            @*<button class="button" type="submit"><span>Retry Google Pay</span></button>*@
-        </form>
+    <form id="retry-googlepay" method="post" action="/checkouts/RetryGooglePay">
+        @*<input id="googleNonce" name="google_nonce" type="hidden" />*@
+        <input id="googleDeviceData" name="google_device_data" type="hidden" />
+        <input id="googleToken" name="google_token" type="text" value="@ViewBag.Transaction.AndroidPayDetails.Token" />
+        <section id="google-pay-container">
+        </section>
+        @*<button class="button" type="submit"><span>Retry Google Pay</span></button>*@
+    </form>
     }
 }
 
@@ -196,6 +199,7 @@
 <script src="https://pay.google.com/gp/p/js/pay.js"></script>
 <script src="https://www.paypalobjects.com/api/checkout.js" data-version-4 log-level="warn"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.60.0/js/data-collector.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/paypal-checkout.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/google-payment.min.js"></script>
@@ -230,6 +234,19 @@
                 },
             }
         };
+
+        braintree.dataCollector.create({
+            client: clientInstance,
+            kount: true,
+            paypal: true
+        }, function (err, dataCollectorInstance) {
+            if (err) {
+                return;
+            }
+                document.querySelector("#cvvDeviceData").value = dataCollectorInstance.deviceData;
+                document.querySelector("#paypalDeviceData").value = dataCollectorInstance.deviceData;
+                document.querySelector("#googleDeviceData").value = dataCollectorInstance.deviceData;
+        });
 
         braintree.hostedFields.create(options, function (createErr, hostedFieldsInstance) {
             if (createErr) return;

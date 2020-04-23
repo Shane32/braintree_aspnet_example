@@ -72,6 +72,7 @@ namespace BraintreeASPExample.Controllers
             var paymentType = Request["payment_type"];
             var details = Request["details"];
             var billingDetails = Request["billingAddress"];
+            var deviceData = Request["device_data"];
 
             PaymentDetails paymentDetails = null;
             GooglePayDetails googlePayDetails = null;
@@ -168,6 +169,7 @@ namespace BraintreeASPExample.Controllers
             var transactionRequest = new TransactionRequest
             {
                 Amount = 8.64M,
+                DeviceData = deviceData,
                 PaymentMethodNonce = nonce,
                 CustomerId = "1",
                 ShippingAddress = shippingAddress,
@@ -219,6 +221,7 @@ namespace BraintreeASPExample.Controllers
             var gateway = config.GetGateway();
             var nonce = Request["cvv_nonce"];
             var paymentToken = Request["payment_method_token"];
+            var deviceData = Request["cvv_device_data"];
 
             //Example of verify existing CVV
             //PaymentMethodRequest request = new PaymentMethodRequest
@@ -237,6 +240,7 @@ namespace BraintreeASPExample.Controllers
                 Amount = 20,
                 PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
+                DeviceData = deviceData,
                 CustomerId = "1",
                 Options = new TransactionOptionsRequest
                 {
@@ -263,7 +267,7 @@ namespace BraintreeASPExample.Controllers
             var gateway = config.GetGateway();
             var nonce = Request["paypal_nonce"];
             var paymentToken = Request["paypal_token"];
-
+            var deviceData = Request["paypal_device_data"];
             //Example of verify existing CVV
             //PaymentMethodRequest request = new PaymentMethodRequest
             //{
@@ -282,6 +286,7 @@ namespace BraintreeASPExample.Controllers
                 Amount = 100,
                 PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
+                DeviceData = deviceData,
                 CustomerId = "1",
                 Options = new TransactionOptionsRequest
                 {
@@ -301,7 +306,7 @@ namespace BraintreeASPExample.Controllers
             var gateway = config.GetGateway();
             var nonce = Request["google_nonce"];
             var paymentToken = Request["google_token"];
-
+            var deviceData = Request["google_device_data"];
             //Example of verify existing CVV
             //PaymentMethodRequest request = new PaymentMethodRequest
             //{
@@ -318,6 +323,7 @@ namespace BraintreeASPExample.Controllers
             var transactionRequest = new TransactionRequest
             {
                 Amount = 40,
+                DeviceData = deviceData,
                 //PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
                 //CustomerId = "1",
