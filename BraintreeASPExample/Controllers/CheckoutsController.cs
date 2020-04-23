@@ -70,13 +70,29 @@ namespace BraintreeASPExample.Controllers
 
             var nonce = Request["payment_method_nonce"];
             var paymentType = Request["payment_type"];
-            string details = Request["details"];
+            var details = Request["details"];
+            var billingDetails = Request["billingAddress"];
 
             PaymentDetails paymentDetails = null;
+            GooglePayDetails googlePayDetails = null;
+            BillingAddress billingAddressDetails = null;
+
 
             if (!String.IsNullOrEmpty(details))
             {
-                paymentDetails = JsonConvert.DeserializeObject<PaymentDetails>(details);
+                if (paymentType == "AndroidPayCard")
+                {
+                    googlePayDetails = JsonConvert.DeserializeObject<GooglePayDetails>(details);
+                } else
+                {
+                    paymentDetails = JsonConvert.DeserializeObject<PaymentDetails>(details);
+                }
+            }
+
+
+            if (!String.IsNullOrEmpty(billingDetails))
+            {
+                billingAddressDetails = JsonConvert.DeserializeObject<BillingAddress>(billingDetails);
             }
 
             //Don't need this right now
@@ -115,6 +131,23 @@ namespace BraintreeASPExample.Controllers
                 shippingAddress.ExtendedAddress = paymentDetails.ShippingAddress.Line2;
             }
 
+            AddressRequest billingAddress = new AddressRequest();
+
+            if (billingAddressDetails != null)
+            {
+                //splits names into first and last, will not work with names like da Silva
+                var names = billingAddressDetails.Name.Split(' ');
+
+                billingAddress.CountryCodeAlpha2 = billingAddressDetails.CountryCode;
+                billingAddress.FirstName = names[0];
+                billingAddress.LastName = names[1];
+                billingAddress.Locality = billingAddressDetails.City;
+                billingAddress.PostalCode = billingAddressDetails.PostalCode;
+                billingAddress.Region = billingAddressDetails.State;
+                billingAddress.StreetAddress = billingAddressDetails.Address1;
+                billingAddress.ExtendedAddress = billingAddressDetails.Address2;
+            }
+
             TransactionLineItemRequest[] transactionLineItemRequests = new TransactionLineItemRequest[1];
             transactionLineItemRequests[0] = new TransactionLineItemRequest
             {
@@ -138,6 +171,7 @@ namespace BraintreeASPExample.Controllers
                 PaymentMethodNonce = nonce,
                 CustomerId = "1",
                 ShippingAddress = shippingAddress,
+                BillingAddress = billingAddress,
                 ShippingAmount = 6.99M,
                 LineItems = transactionLineItemRequests,
                 Options = new TransactionOptionsRequest
@@ -245,7 +279,7 @@ namespace BraintreeASPExample.Controllers
             //Example of processing a transaction and verifying the CVV
             var transactionRequest = new TransactionRequest
             {
-                Amount = 30,
+                Amount = 100,
                 PaymentMethodNonce = nonce,
                 PaymentMethodToken = paymentToken,
                 CustomerId = "1",
@@ -259,6 +293,44 @@ namespace BraintreeASPExample.Controllers
             Result<Transaction> transactionResult = gateway.Transaction.Sale(transactionRequest);
 
             return View("PayPal transaction successful!");
+        }
+
+
+        public ActionResult RetryGooglePay()
+        {
+            var gateway = config.GetGateway();
+            var nonce = Request["google_nonce"];
+            var paymentToken = Request["google_token"];
+
+            //Example of verify existing CVV
+            //PaymentMethodRequest request = new PaymentMethodRequest
+            //{
+            //    PaymentMethodNonce = nonce,
+            //    Options = new PaymentMethodOptionsRequest
+            //    {
+            //        VerifyCard = true
+            //    }
+            //};
+            //Result<PaymentMethod> verifyResult = gateway.PaymentMethod.Update(paymentToken, request);
+
+
+            //Example of processing a transaction and verifying the CVV
+            var transactionRequest = new TransactionRequest
+            {
+                Amount = 40,
+                //PaymentMethodNonce = nonce,
+                PaymentMethodToken = paymentToken,
+                //CustomerId = "1",
+                Options = new TransactionOptionsRequest
+                {
+                    SubmitForSettlement = true,
+                    //AddBillingAddressToPaymentMethod = true,
+                },
+            };
+
+            Result<Transaction> transactionResult = gateway.Transaction.Sale(transactionRequest);
+
+            return View("Google Pay transaction successful!");
         }
 
         public ActionResult Show(String id)

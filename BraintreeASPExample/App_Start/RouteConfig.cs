@@ -53,6 +53,12 @@ namespace BraintreeASPExample
             );
 
             routes.MapRoute(
+                name: "Checkouts-RetryGooglePay",
+                url: "checkouts/RetryGooglePay",
+                defaults: new { controller = "Checkouts", action = "RetryGooglePay" }
+            );
+
+            routes.MapRoute(
                 name: "Home",
                 url: "",
                 defaults: new { controller = "Checkouts", action = "New" }

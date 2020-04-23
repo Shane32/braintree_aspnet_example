@@ -149,32 +149,66 @@
     </article>
 </aside>
 
-<form id="verify-cvv" method="post" action="/checkouts/VerifyCVV">
-    <section>
-        <label for="cvv"></label>
-        <div id="cvv"></div>
-    </section>
+@{
+    if (ViewBag.Transaction.CreditCard != null)
+    {
+        <form id="verify-cvv" method="post" action="/checkouts/VerifyCVV">
+            <section>
+                <label for="cvv"></label>
+                <div id="cvv"></div>
+            </section>
 
-    <input id="nonce" name="cvv_nonce" type="hidden" />
-    <input id="token" name="payment_method_token" type="text" value="@ViewBag.Transaction.CreditCard.Token"/>
-    <button class="button" type="submit"><span>Verify CVV</span></button>
-</form>
-
-<form id="retry-paypal" method="post" action="/checkouts/RetryPaypal">
-    <input id="paypalNonce" name="paypal_nonce" type="hidden" />
-    <input id="paypalToken" name="paypal_token" type="text" value="@ViewBag.Transaction.PayPalDetails.Token" />
-    <button class="button" type="submit"><span>Retry Paypal</span></button>
-</form>
+            <input id="nonce" name="cvv_nonce" type="hidden" />
+            <input id="token" name="payment_method_token" type="text" value="@ViewBag.Transaction.CreditCard.Token" />
+            <button class="button" type="submit"><span>Verify CVV</span></button>
+        </form>
+    }
+}
 
 
+@{
+    if (ViewBag.Transaction.PayPalDetails != null)
+    {
+        <form id="retry-paypal" method="post" action="/checkouts/RetryPaypal">
+            <input id="paypalNonce" name="paypal_nonce" type="hidden" />
+            <input id="paypalToken" name="paypal_token" type="text" value="@ViewBag.Transaction.PayPalDetails.Token" />
+            <button class="button" type="submit"><span>Retry Paypal</span></button>
+        </form>
+    }
+}
+
+@{
+    if (ViewBag.Transaction.AndroidPayDetails != null)
+    {
+        <form id="retry-googlepay" method="post" action="/checkouts/RetryGooglePay">
+            @*<input id="googleNonce" name="google_nonce" type="hidden" />*@
+            <input id="googleToken" name="google_token" type="text" value="@ViewBag.Transaction.AndroidPayDetails.Token" />
+            <section id="google-pay-container">
+            </section>
+            @*<button class="button" type="submit"><span>Retry Google Pay</span></button>*@
+        </form>
+    }
+}
+
+
+
+
+<script src="https://pay.google.com/gp/p/js/pay.js"></script>
+<script src="https://www.paypalobjects.com/api/checkout.js" data-version-4 log-level="warn"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.60.0/js/paypal-checkout.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.60.0/js/google-payment.min.js"></script>
 
 <script>
     var client_token = "@ViewBag.ClientToken";
     var form = document.querySelector('#verify-cvv');
     var form2 = document.querySelector('#retry-paypal');
-
+    var form3 = document.querySelector('#retry-googlepay');
+    var payPalToken = document.querySelector('#paypalToken');
+    var googleToken = document.querySelector('#googleToken');
+    var creditToken = document.querySelector('#token');
+    console.log(payPalToken, googleToken, creditToken);
     if (braintree !== undefined) console.log(true);
 
     braintree.client.create({
@@ -182,7 +216,9 @@
     }, function (clientErr, clientInstance) {
         console.log(clientErr, clientInstance);
 
-        if (clientErr) return;
+            if (clientErr) return;
+            if (creditToken !== null && creditToken.value !== null) {
+
 
         var options = {
             client: clientInstance,
@@ -214,93 +250,207 @@
                 });
             });
         });
+            }
+            if (payPalToken !== null && payPalToken.value !== null) {
 
 
-        const paypalOptions = {
-            flow: 'vault',
-            intent: 'capture',
-            enableShippingAddress: true,
-            shippingAddressEditable: false,
-            shippingAddressOverride: shippingAddress,
-            amount: "1.65",
-            shippingOptions: [
-                {
-                    id: 'fedex-ground',
-                    type: 'SHIPPING',
-                    label: 'Ground Shipping',
-                    selected: true,
-                    amount: {
-                        value: '1.00',
-                        currency: 'USD'
+                const paypalOptions = {
+                    flow: 'vault',
+                    intent: 'capture',
+                    enableShippingAddress: true,
+                    shippingAddressEditable: false,
+                    shippingAddressOverride: shippingAddress,
+                    amount: "1.65",
+                    shippingOptions: [
+                        {
+                            id: 'fedex-ground',
+                            type: 'SHIPPING',
+                            label: 'Ground Shipping',
+                            selected: true,
+                            amount: {
+                                value: '1.00',
+                                currency: 'USD'
+                            }
+                        },
+                        {
+                            id: 'fedex-priority',
+                            type: 'SHIPPING',
+                            label: '1-Day Shipping',
+                            selected: false,
+                            amount: {
+                                value: '10.00',
+                                currency: 'USD'
+                            }
+                        }
+                    ],
+                    lineItems: [
+                        {
+                            quantity: "1",
+                            unitAmount: "1.56",
+                            name: "8T4191 Test Bolt",
+                            kind: "debit",
+                            unitTaxAmount: "0.09",
+                            description: "A cool test bolt to test things with.",
+                            productCode: "8T4191-ZBOX",
+                            url: "https://www.zbox.com/product/p/151"
+                        }
+                    ],
+                    // Your PayPal options here. For available options, see
+                    // http://braintree.github.io/braintree-web/current/PayPalCheckout.html#createPayment
+                };
+
+                braintree.paypalCheckout.create({
+                    client: clientInstance
+                }, function (paypalCheckoutErr, paypalCheckoutInstance) {
+                    if (paypalCheckoutErr) {
+                        console.error('Error creating PayPal Checkout:', paypalCheckoutErr);
+                        return;
                     }
-                },
-                {
-                    id: 'fedex-priority',
-                    type: 'SHIPPING',
-                    label: '1-Day Shipping',
-                    selected: false,
-                    amount: {
-                        value: '10.00',
-                        currency: 'USD'
-                    }
-                }
-            ],
-            lineItems: [
-                {
-                    quantity: "1",
-                    unitAmount: "1.56",
-                    name: "8T4191 Test Bolt",
-                    kind: "debit",
-                    unitTaxAmount: "0.09",
-                    description: "A cool test bolt to test things with.",
-                    productCode: "8T4191-ZBOX",
-                    url: "https://www.zbox.com/product/p/151"
-                }
-            ],
-            // Your PayPal options here. For available options, see
-            // http://braintree.github.io/braintree-web/current/PayPalCheckout.html#createPayment
-        };
 
-        braintree.paypalCheckout.create({
-            client: clientInstance
-        }, function (paypalCheckoutErr, paypalCheckoutInstance) {
-            if (paypalCheckoutErr) {
-                console.error('Error creating PayPal Checkout:', paypalCheckoutErr);
-                return;
+                    paypal.Button.render({
+                        env: 'sandbox',
+
+                        payment: function () {
+                            return paypalCheckoutInstance.createPayment(paypalOptions);
+                        },
+
+                        onAuthorize: function (data, actions) {
+                            return paypalCheckoutInstance.tokenizePayment(data, function (err, payload) {
+                                console.log(payload);
+                                //Submit the 'payload.nonce' to your server.
+                                document.querySelector('#paypal_nonce').value = payload.nonce;
+                                //document.querySelector("#paypal_token").value = payload.token
+                                //document.querySelector("#paymentType").value = payload.type;
+                                //document.querySelector("#details").value = JSON.stringify(payload.details);
+                                form2.submit();
+                            });
+                        },
+
+                        onCancel: function (data) {
+                            console.log('checkout.js payment cancelled', JSON.stringify(data, 0, 2));
+                        },
+
+                        onError: function (err) {
+                            console.error('checkout.js error', err);
+                        }
+                    }, '#paypal-button').then(function () {
+                        // The PayPal button will be rendered in an html element with the id
+                        // `paypal-button`. This function will be called when the PayPal button
+                        // is set up and ready to be used.
+                    });
+
+                });
             }
 
-            paypal.Button.render({
-                env: 'sandbox',
+            if (googleToken !== null && googleToken.value !== null) {
+                const paymentsClient = new google.payments.api.PaymentsClient({ environment: 'TEST' });
 
-                payment: function () {
-                    return paypalCheckoutInstance.createPayment(paypalOptions);
-                },
+                const googleOptions = {
+                    client: clientInstance,
+                    googlePayVersion: 2
+                };
 
-                onAuthorize: function (data, actions) {
-                    return paypalCheckoutInstance.tokenizePayment(data, function (err, payload) {
-                        console.log(payload);
-                        //Submit the 'payload.nonce' to your server.
-                        document.querySelector('#paypal_nonce').value = payload.nonce;
-                        //document.querySelector("#paypal_token").value = payload.token
-                        //document.querySelector("#paymentType").value = payload.type;
-                        //document.querySelector("#details").value = JSON.stringify(payload.details);
-                        form2.submit();
+                let PayPalPaymentMethod = {
+                    "type": "PAYPAL",
+                    "parameters": {
+                        "purchase_context": {
+                            "purchase_units": [{
+                                "payee": {
+                                    "merchant_id": " paypal_merchant_id"
+                                }
+                            }]
+                        }
+                    }
+                };
+
+                let creditCardMethods = {
+                    "type": "CARD",
+                    "parameters": {
+                        "allowedAuthMethods": ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+                        "allowedCardNetworks": ["AMEX", "DISCOVER", "INTERAC", "JCB", "MASTERCARD", "VISA"]
+                    }
+                };
+
+                braintree.googlePayment.create(googleOptions, function (err, googlePaymentInstance) {
+                    const isReadyToPayOptions = {
+                        apiVersion: 2,
+                        apiVersionMinor: 0,
+                        allowedPaymentMethods: googlePaymentInstance.createPaymentDataRequest().allowedPaymentMethods,
+                        existingPaymentMethodRequired: true
+                    };
+
+                    console.log(googlePaymentInstance);
+                    paymentsClient.isReadyToPay(isReadyToPayOptions).then(function (isReadyToPay) {
+                        if (isReadyToPay.result) {
+                            const googlePayButton = paymentsClient.createButton({
+                                onClick: (e) => {
+                                    e.preventDefault();
+                                    const paymentDataRequest = googlePaymentInstance.createPaymentDataRequest({
+                                        transactionInfo: {
+                                            currencyCode: 'USD',
+                                            totalPriceStatus: 'FINAL',
+                                            totalPrice: '100.00'
+                                        }
+                                    });
+
+                                    console.log(isReadyToPay);
+                                    //const cardPaymentMethod = paymentDataRequest.allowedPaymentMethods[0];
+                                    //cardPaymentMethod.parameters.billingAddressRequired = true;
+                                    //cardPaymentMethod.parameters.billingAddressParameters = {
+                                    //    format: "FULL",
+                                    //    phoneNumberRequired: true
+                                    //};
+                                    //PayPalPaymentMethod.tokenizationSpecification = {
+                                    //    "type": "DIRECT"
+                                    //};
+
+                                    //todo: figure out why this doesn't work
+                                    //cardPaymentMethod.parameters.shippingOptionRequired = true;
+                                    //cardPaymentMethod.parameters.shippingOptionParameters = [
+                                    //    {
+                                    //        defaultSelectedOptionId: "0",
+                                    //        shippingOptions: [
+                                    //            {
+                                    //                "id": "shipping-001",
+                                    //                "label": "$0.00: Free shipping",
+                                    //                "description": "Free Shipping delivered in 5 business days."
+                                    //            },
+                                    //            {
+                                    //                "id": "shipping-002",
+                                    //                "label": "$1.99: Standard shipping",
+                                    //                "description": "Standard shipping delivered in 3 business days."
+                                    //            },
+                                    //            {
+                                    //                "id": "shipping-003",
+                                    //                "label": "$1000: Express shipping",
+                                    //                "description": "Express shipping delivered in 1 business day."
+                                    //            }
+                                    //        ]
+                                    //    }
+                                    //];
+                                    paymentsClient.loadPaymentData(paymentDataRequest).then(function (paymentData) {
+                                        console.log(paymentData);
+                                        googlePaymentInstance.parseResponse(paymentData, function (err, result) {
+                                            if (err) {
+                                                console.log(err);
+                                                // Handle parsing error
+                                            }
+                                            if (result) {
+                                                console.log(result);
+                                                //document.querySelector('#googleNonce').value = result.nonce;
+                                                form3.submit();
+                                            }
+                                            // result.type may be either "AndroidPayCard" or "PayPalAccount"
+                                        });
+                                    }).catch(function (err) {
+                                        console.log(err);
+                                    });
+                                }
+                            });
+                            document.getElementById('google-pay-container').appendChild(googlePayButton);
+                        }
                     });
-                },
-
-                onCancel: function (data) {
-                    console.log('checkout.js payment cancelled', JSON.stringify(data, 0, 2));
-                },
-
-                onError: function (err) {
-                    console.error('checkout.js error', err);
-                }
-            }, '#paypal-button').then(function () {
-                // The PayPal button will be rendered in an html element with the id
-                // `paypal-button`. This function will be called when the PayPal button
-                // is set up and ready to be used.
-            });
-
-        });
+                });
+            }
     });
 </script>
