@@ -40,6 +40,7 @@
             <input id="lastFour" name="last_four" type="hidden" />
             <input id="cardType" name="card_type" type="hidden" />
             <input id="details" name="details" type="hidden" />
+            <input id="deviceData" name="device_data" type="hidden" />
             <input id="billingAddress" name="billingAddress" type="hidden"/>
             <button class="button" type="submit"><span>Test Transaction</span></button>
 
@@ -58,6 +59,7 @@
 <script src="https://pay.google.com/gp/p/js/pay.js"></script>
 <script src="https://www.paypalobjects.com/api/checkout.js" data-version-4 log-level="warn"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/client.min.js"></script>
+<script src="https://js.braintreegateway.com/web/3.60.0/js/data-collector.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/hosted-fields.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/paypal-checkout.min.js"></script>
 <script src="https://js.braintreegateway.com/web/3.60.0/js/google-payment.min.js"></script>
@@ -80,7 +82,18 @@
     }, function (clientErr, clientInstance) {
         console.log(clientErr, clientInstance);
 
-        if (clientErr) return;
+            if (clientErr) return;
+
+            braintree.dataCollector.create({
+                client: clientInstance,
+                kount: true,
+                paypal: true
+            }, function (err, dataCollectorInstance) {
+                if (err) {
+                    return;
+                }
+                document.querySelector("#deviceData").value = dataCollectorInstance.deviceData;
+            });
 
         const options = {
             client: clientInstance,
